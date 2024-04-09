@@ -65,6 +65,9 @@ export const getters = {
   getIsSeriesRemovedFromContinueListening: (state) => (seriesId) => {
     if (!state.user || !state.user.seriesHideFromContinueListening || !state.user.seriesHideFromContinueListening.length) return false
     return state.user.seriesHideFromContinueListening.includes(seriesId)
+  },
+  getSizeMultiplier: (state) => {
+    return state.settings.bookshelfCoverSize / 120
   }
 }
 

@@ -53,9 +53,6 @@ export default {
 
       const props = {
         index,
-        width: this.entityWidth,
-        height: this.entityHeight,
-        bookCoverAspectRatio: this.coverAspectRatio,
         bookshelfView: this.bookshelfView,
         sortingIgnorePrefix: !!this.sortingIgnorePrefix
       }

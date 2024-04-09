@@ -1,38 +1,40 @@
 <template>
-  <nuxt-link :to="`/author/${author.id}`">
-    <div @mouseover="mouseover" @mouseleave="mouseleave">
-      <div :style="{ width: width + 'px', height: height + 'px' }" class="bg-primary box-shadow-book rounded-md relative overflow-hidden">
-        <!-- Image or placeholder -->
-        <covers-author-image :author="author" />
+  <div>
+    <nuxt-link :to="`/author/${author.id}`">
+      <div :style="{ fontSize: sizeMultiplier + 'rem' }" @mouseover="mouseover" @mouseleave="mouseleave">
+        <div :style="{ width: cardWidth + 'px', height: cardHeight + 'px' }" class="bg-primary box-shadow-book rounded-md relative overflow-hidden">
+          <!-- Image or placeholder -->
+          <covers-author-image :author="author" />
 
-        <!-- Author name & num books overlay -->
-        <div v-show="!searching && !nameBelow" class="absolute bottom-0 left-0 w-full py-1 bg-black bg-opacity-60 px-2">
-          <p class="text-center font-semibold truncate" :style="{ fontSize: sizeMultiplier * 0.75 + 'rem' }">{{ name }}</p>
-          <p class="text-center text-gray-200" :style="{ fontSize: sizeMultiplier * 0.65 + 'rem' }">{{ numBooks }} {{ $strings.LabelBooks }}</p>
-        </div>
+          <!-- Author name & num books overlay -->
+          <div v-show="!searching && !nameBelow" class="absolute bottom-0 left-0 w-full py-1 bg-black bg-opacity-60 px-2">
+            <p class="text-center font-semibold truncate" :style="{ fontSize: 0.75 + 'em' }">{{ name }}</p>
+            <p class="text-center text-gray-200" :style="{ fontSize: 0.65 + 'em' }">{{ numBooks }} {{ $strings.LabelBooks }}</p>
+          </div>
 
-        <!-- Search icon btn -->
-        <div v-show="!searching && isHovering && userCanUpdate" class="absolute top-0 left-0 p-2 cursor-pointer hover:text-white text-gray-200 transform hover:scale-125 duration-150" @click.prevent.stop="searchAuthor">
-          <ui-tooltip :text="$strings.ButtonQuickMatch" direction="bottom">
-            <span class="material-icons text-lg">search</span>
-          </ui-tooltip>
-        </div>
-        <div v-show="isHovering && !searching && userCanUpdate" class="absolute top-0 right-0 p-2 cursor-pointer hover:text-white text-gray-200 transform hover:scale-125 duration-150" @click.prevent.stop="$emit('edit', author)">
-          <ui-tooltip :text="$strings.LabelEdit" direction="bottom">
-            <span class="material-icons text-lg">edit</span>
-          </ui-tooltip>
-        </div>
+          <!-- Search icon btn -->
+          <div v-show="!searching && isHovering && userCanUpdate" class="absolute top-0 left-0 p-2 cursor-pointer hover:text-white text-gray-200 transform hover:scale-125 duration-150" @click.prevent.stop="searchAuthor">
+            <ui-tooltip :text="$strings.ButtonQuickMatch" direction="bottom">
+              <span class="material-icons text-lg">search</span>
+            </ui-tooltip>
+          </div>
+          <div v-show="isHovering && !searching && userCanUpdate" class="absolute top-0 right-0 p-2 cursor-pointer hover:text-white text-gray-200 transform hover:scale-125 duration-150" @click.prevent.stop="$emit('edit', author)">
+            <ui-tooltip :text="$strings.LabelEdit" direction="bottom">
+              <span class="material-icons text-lg">edit</span>
+            </ui-tooltip>
+          </div>
 
-        <!-- Loading spinner -->
-        <div v-show="searching" class="absolute top-0 left-0 z-10 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
-          <widgets-loading-spinner size="" />
+          <!-- Loading spinner -->
+          <div v-show="searching" class="absolute top-0 left-0 z-10 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
+            <widgets-loading-spinner size="" />
+          </div>
+        </div>
+        <div v-show="nameBelow" class="w-full py-1 px-2">
+          <p class="text-center font-semibold truncate text-gray-200" :style="{ fontSize: 0.75 + 'em' }">{{ name }}</p>
         </div>
       </div>
-      <div v-show="nameBelow" class="w-full py-1 px-2">
-        <p class="text-center font-semibold truncate text-gray-200" :style="{ fontSize: sizeMultiplier * 0.75 + 'rem' }">{{ name }}</p>
-      </div>
-    </div>
-  </nuxt-link>
+    </nuxt-link>
+  </div>
 </template>
 
 <script>
@@ -44,10 +46,6 @@ export default {
     },
     width: Number,
     height: Number,
-    sizeMultiplier: {
-      type: Number,
-      default: 1
-    },
     nameBelow: Boolean
   },
   data() {
@@ -57,6 +55,12 @@ export default {
     }
   },
   computed: {
+    cardWidth() {
+      return this.width || this.cardHeight * 0.8
+    },
+    cardHeight() {
+      return this.height || 192 * this.sizeMultiplier
+    },
     userToken() {
       return this.$store.getters['user/getToken']
     },
@@ -83,6 +87,9 @@ export default {
     },
     libraryProvider() {
       return this.$store.getters['libraries/getLibraryProvider'](this.currentLibraryId) || 'google'
+    },
+    sizeMultiplier() {
+      return this.$store.getters['user/getSizeMultiplier']
     }
   },
   methods: {

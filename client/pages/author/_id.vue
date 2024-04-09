@@ -25,7 +25,11 @@
       </div>
 
       <div class="py-4">
-        <widgets-item-slider :items="libraryItems" shelf-id="author-books" :bookshelf-view="$constants.BookshelfView.AUTHOR">
+        <widgets-item-slider 
+          :items="libraryItems" 
+          shelf-id="author-books" 
+          :bookshelf-view="$constants.BookshelfView.AUTHOR"
+        >
           <nuxt-link :to="`/library/${currentLibraryId}/bookshelf?filter=authors.${$encode(author.id)}`" class="hover:underline">
             <h2 class="text-lg">{{ libraryItems.length }} {{ $strings.LabelBooks }}</h2>
           </nuxt-link>
@@ -33,7 +37,11 @@
       </div>
 
       <div v-for="series in authorSeries" :key="series.id" class="py-4">
-        <widgets-item-slider :items="series.items" :shelf-id="series.id" :bookshelf-view="$constants.BookshelfView.AUTHOR">
+        <widgets-item-slider 
+          :items="series.items" 
+          :shelf-id="series.id" 
+          :bookshelf-view="$constants.BookshelfView.AUTHOR"
+        >
           <nuxt-link :to="`/library/${currentLibraryId}/series/${series.id}`" class="hover:underline">
             <h2 class="text-lg">{{ series.name }}</h2>
           </nuxt-link>
