@@ -7,12 +7,13 @@ on:
       - 'dependabot/**' # Don't run dependabot branches, as they are already covered by pull requests
     # Only build when files in these directories have been changed
     paths:
-      - client/**
       - server/**
       - test/**
       - index.js
       - package.json
       - tsconfig.server.json
+      - scripts/fetch-client-react-runtime.js
+      - .github/workflows/integration-test.yml
 
 jobs:
   build:
@@ -30,24 +31,84 @@ jobs:
       - name: install pkg (using yao-pkg fork for targeting node24)
         run: npm install -g @yao-pkg/pkg
 
-      - name: get client dependencies
-        working-directory: client
-        run: npm ci
-
-      - name: build client
-        working-directory: client
-        run: npm run generate
-
       - name: get server dependencies and compile server
         run: npm ci && npm run build:server && npm prune --omit=dev
 
       - name: build binary
-        run: pkg --config package.json -t node24-linux-x64 -o audiobookshelf dist-server/index.js
+        run: pkg --config package.json -t node24-linux-x64 -o dist/pkg/audiobookshelf dist-server/index.js
+
+      - name: fetch the React client runtime
+        run: node scripts/fetch-client-react-runtime.js --out dist/pkg/client-react
 
       - name: run audiobookshelf
         run: |
-          ./audiobookshelf &
-          sleep 5
+          set -euo pipefail
+          root="$(pwd)"
+          react_dir="$root/dist/pkg/client-react"
+          bin="$root/dist/pkg/audiobookshelf"
+          if [ ! -f "$react_dir/node_modules/next/package.json" ]; then
+            echo "React client runtime is missing: $react_dir"
+            exit 1
+          fi
 
-      - name: test if server is available
-        run: curl -sf http://127.0.0.1:3333 | grep Audiobookshelf
+          work="$(mktemp -d)"
+          mkdir -p "$work/config" "$work/metadata"
+          log="$work/missing.log"
+
+          echo ">>> Missing REACT_CLIENT_PATH"
+          set +e
+          env -u REACT_CLIENT_PATH \
+            HOST=127.0.0.1 \
+            PORT=3333 \
+            CONFIG_PATH="$work/config" \
+            METADATA_PATH="$work/metadata" \
+            "$bin" >"$log" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Server stayed up without REACT_CLIENT_PATH"
+            cat "$log" || true
+            exit 1
+          fi
+          if ! grep -q "REACT_CLIENT_PATH is required" "$log"; then
+            echo "Missing-path run did not report that REACT_CLIENT_PATH is required"
+            cat "$log" || true
+            exit 1
+          fi
+
+          echo ">>> React client"
+          react_log="$work/react.log"
+          env REACT_CLIENT_PATH="$react_dir" \
+            HOST=127.0.0.1 \
+            PORT=3334 \
+            CONFIG_PATH="$work/config" \
+            METADATA_PATH="$work/metadata" \
+            "$bin" >"$react_log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" >/dev/null 2>&1 || true' EXIT
+
+          ready=0
+          for _ in $(seq 1 60); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "React client exited before it was healthy"
+              tail -n 80 "$react_log" || true
+              exit 1
+            fi
+            if curl -sf --max-time 5 "http://127.0.0.1:3334/healthcheck" >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "React client did not become healthy"
+            tail -n 80 "$react_log" || true
+            exit 1
+          fi
+          page="$(curl -sfL --max-time 30 "http://127.0.0.1:3334/")"
+          if ! printf '%s' "$page" | grep -q '/_next/'; then
+            echo "React client page did not contain /_next/"
+            tail -n 80 "$react_log" || true
+            exit 1
+          fi
+          echo "React client ok"
